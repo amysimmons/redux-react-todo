@@ -79,18 +79,68 @@ const store = createStore(todoApp);
 // Component is a base class for all react components.
 const { Component } = React;
 
+// The user clicks the FilterLink to switch the current visible todos.
+// The filter prop is a string indicating whether the user wants to
+// show all, show active or show completed.
+// The currentFilter prop allows us to style the currently selected filter
+// different to the others.
+// The children is the contents of the link, in this case either 'All', 'Active'
+// or 'Completed'.
+// The children get passed to the a tag so the parent component can specify
+// the text of the link, making it more reusable.
+const FilterLink = ({ filter, currentFilter, children }) => {
+  // if the filter is the current filter, don't make it clickable
+  if (filter === currentFilter) {
+    return (
+      <span>{children}</span>
+    )
+  }
+  return (
+    <a href="#"
+      onClick={(e) => {
+        e.preventDefault(); // prevent navigation when clicked
+        store.dispatch({
+          type: 'SET_VISIBILITY_FILTER',
+          filter
+        });
+      }}
+    >
+      {children}
+    </a>
+  );
+};
+
+const getVisibleTodos = (todos, filter) => {
+  switch(filter) {
+    case 'SHOW_ALL':
+      return todos;
+    case 'SHOW_ACTIVE':
+      return todos.filter(t => !t.completed);
+    case 'SHOW_COMPLETED':
+      return todos.filter(t => t.completed);
+  }
+}
+
 let nextTodoId = 0;
 
 // We create a TodoApp class that extends the base Component class.
 class TodoApp extends Component {
   render() {
+    const {todos, visibilityFilter} = this.props;
+    const visibleTodos = getVisibleTodos(
+      todos,
+      visibilityFilter
+    );
+
     return (
         // The input uses React's callback ref api.
         // ref is a function that gets the node corresponding to the ref
         // We save the node to this.input.
         // This allows us to later read the value of the input and reset it.
 
-        // The 'Add todo' button dispatches a redux action when clicked.
+        // The 'Add todo' button dispatches an action when clicked.
+
+        // Each todo dispatches a toggle action when clicked.
       <div>
         <input ref={node => {
           this.input = node;
@@ -108,14 +158,50 @@ class TodoApp extends Component {
           Add Todo
         </button>
         <ul>
-          {this.props.todos.map((todo) => {
+          {visibleTodos.map((todo) => {
             return (
-              <li key={todo.id}>
+              <li key={todo.id}
+                  onClick={() => {
+                    store.dispatch({
+                      type: 'TOGGLE_TODO',
+                      id: todo.id,
+                    });
+                  }}
+                  style={{
+                    textDecoration: todo.completed ? 'line-through' : 'none'
+                  }}>
                 {todo.text}
               </li>
             )
           })}
         </ul>
+        <p>
+          Show:
+
+          {' '}
+          <FilterLink
+            filter='SHOW_ALL'
+            currentFilter={visibilityFilter}
+          >
+            All
+          </FilterLink>
+
+          {' '}
+          <FilterLink
+            filter='SHOW_ACTIVE'
+            currentFilter={visibilityFilter}
+          >
+            Active
+          </FilterLink>
+
+          {' '}
+          <FilterLink
+            filter='SHOW_COMPLETED'
+            currentFilter={visibilityFilter}
+          >
+            Comlpeted
+          </FilterLink>
+        </p>
       </div>
     )
   }
@@ -123,10 +209,12 @@ class TodoApp extends Component {
 
 // This render function will get called every time a redux action is dispatched.
 // It gets the latest todos state from the store and passes them as props.
+// We pass every property in the global redux state object as a prop to the
+// TodoApp component with the spread operator.
 const render = () => {
   ReactDOM.render(
     <TodoApp
-      todos={store.getState().todos}/>,
+    {...store.getState()}/>,
     document.getElementById('root')
   );
 }
