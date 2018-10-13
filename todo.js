@@ -110,6 +110,41 @@ const FilterLink = ({ filter, currentFilter, children }) => {
   );
 };
 
+// Todo is a presentational component. It does not specify any behaviour, and is
+// only concerned with how things look or render. Eg, the onclick handler is a prop.
+// This way anyone who uses the component can specify what happens on the click.
+// Rather than passing the entire todo object, we are explicit, and pass only the
+// data that the component needs to render.
+const Todo = ({onClick, completed, text}) => {
+  return (
+    <li
+        onClick={onClick}
+        style={{
+          textDecoration: completed ? 'line-through' : 'none'
+        }}>
+      {text}
+    </li>
+  );
+};
+
+// Like Todo, TodoList is also a presentational component.
+const TodoList = ({todos, onTodoClick}) => {
+  return (
+    <ul>
+      {
+        todos.map((todo) => {
+          return (
+            <Todo
+              key={todo.id}
+              {...todo}
+              onClick={() => onTodoClick(todo.id)}/>
+          )
+        })
+      }
+    </ul>
+  );
+};
+
 const getVisibleTodos = (todos, filter) => {
   switch(filter) {
     case 'SHOW_ALL':
@@ -140,7 +175,8 @@ class TodoApp extends Component {
 
         // The 'Add todo' button dispatches an action when clicked.
 
-        // Each todo dispatches a toggle action when clicked.
+        // We render a TodoList and pass a function so that each todo can dispatch
+        // a toggle action when clicked.
       <div>
         <input ref={node => {
           this.input = node;
@@ -151,30 +187,22 @@ class TodoApp extends Component {
             text: this.input.value,
             id: nextTodoId++,
           });
-          // reset the input value after dispatching the action so that
-          // the field is cleared
+          // Reset the input value after dispatching the action so that
+          // the field is cleared.
           this.input.value = '';
         }}>
           Add Todo
         </button>
-        <ul>
-          {visibleTodos.map((todo) => {
-            return (
-              <li key={todo.id}
-                  onClick={() => {
-                    store.dispatch({
-                      type: 'TOGGLE_TODO',
-                      id: todo.id,
-                    });
-                  }}
-                  style={{
-                    textDecoration: todo.completed ? 'line-through' : 'none'
-                  }}>
-                {todo.text}
-              </li>
-            )
-          })}
-        </ul>
+        <TodoList
+          todos={visibleTodos}
+          onTodoClick={
+            (id) => {
+              store.dispatch({
+                type: 'TOGGLE_TODO',
+                id,
+              });
+            }
+          }/>
         <p>
           Show:
 
