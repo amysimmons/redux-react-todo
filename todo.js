@@ -76,19 +76,18 @@ const todoApp = combineReducers({
 const { createStore } = Redux;
 const store = createStore(todoApp);
 
-// Component is a base class for all react components.
-const { Component } = React;
-
+// FilterLink is a presentational component.
 // The user clicks the FilterLink to switch the current visible todos.
 // The filter prop is a string indicating whether the user wants to
 // show all, show active or show completed.
 // The currentFilter prop allows us to style the currently selected filter
 // different to the others.
+// The onClick is the filter link click handler passed down from above.
 // The children is the contents of the link, in this case either 'All', 'Active'
 // or 'Completed'.
 // The children get passed to the a tag so the parent component can specify
 // the text of the link, making it more reusable.
-const FilterLink = ({ filter, currentFilter, children }) => {
+const FilterLink = ({ filter, currentFilter, onClick, children }) => {
   // if the filter is the current filter, don't make it clickable
   if (filter === currentFilter) {
     return (
@@ -99,10 +98,7 @@ const FilterLink = ({ filter, currentFilter, children }) => {
     <a href="#"
       onClick={(e) => {
         e.preventDefault(); // prevent navigation when clicked
-        store.dispatch({
-          type: 'SET_VISIBILITY_FILTER',
-          filter
-        });
+        onClick(filter);
       }}
     >
       {children}
@@ -110,10 +106,49 @@ const FilterLink = ({ filter, currentFilter, children }) => {
   );
 };
 
+// Footer is a presentational component.
+// It renders the three filter links.
+// It receives a prop and passes down the onFilterClick handler, which is
+// defined in our TodoApp container.
+const Footer = ({visibilityFilter, onFilterClick}) => {
+  return (
+    <p>
+      Show:
+
+      {' '}
+      <FilterLink
+        filter='SHOW_ALL'
+        currentFilter={visibilityFilter}
+        onClick={onFilterClick}
+      >
+        All
+      </FilterLink>
+
+      {' '}
+      <FilterLink
+        filter='SHOW_ACTIVE'
+        currentFilter={visibilityFilter}
+        onClick={onFilterClick}
+      >
+        Active
+      </FilterLink>
+
+      {' '}
+      <FilterLink
+        filter='SHOW_COMPLETED'
+        currentFilter={visibilityFilter}
+        onClick={onFilterClick}
+      >
+        Comlpeted
+      </FilterLink>
+    </p>
+  )
+};
+
 // Todo is a presentational component. It does not specify any behaviour, and is
 // only concerned with how things look or render. Eg, the onclick handler is a prop.
 // This way anyone who uses the component can specify what happens on the click.
-// Rather than passing the entire todo object, we are explicit, and pass only the
+// Rather than receiving the entire todo object, we are explicit, and take only the
 // data that the component needs to render.
 const Todo = ({onClick, completed, text}) => {
   return (
@@ -127,7 +162,11 @@ const Todo = ({onClick, completed, text}) => {
   );
 };
 
-// Like Todo, TodoList is also a presentational component.
+// TodoList is a presentational component that receives the currently visible
+// todos and the onTodoClick callback, which is specified in the TodoApp container.
+// It maps over the todos array, and for each one renders a Todo component.
+// To each Todo component it passes the todo properties (with the spread operator)
+// and the onTodoClick handler with the id of the particular todo.
 const TodoList = ({todos, onTodoClick}) => {
   return (
     <ul>
@@ -145,6 +184,32 @@ const TodoList = ({todos, onTodoClick}) => {
   );
 };
 
+// AddTodo is a presentational component that renders an input and a button.
+// The input uses React's callback ref api.
+// ref is a function that gets the node corresponding to the ref.
+// We save the node to input variable.
+// This allows us to later read the value of the input and reset it.
+// When the button is clicked it passes the value to the onAddClick function,
+// which is specified in the TodoApp container component.
+const AddTodo = ({onAddClick}) => {
+  let input;
+  return (
+    <div>
+      <input ref={node => {
+        input = node;
+      }} />
+      <button onClick={() => {
+        onAddClick(input.value);
+        // Reset the input value after dispatching the action so that
+        // the field is cleared.
+        input.value = '';
+      }}>
+        Add Todo
+      </button>
+    </div>
+  )
+};
+
 const getVisibleTodos = (todos, filter) => {
   switch(filter) {
     case 'SHOW_ALL':
@@ -158,81 +223,46 @@ const getVisibleTodos = (todos, filter) => {
 
 let nextTodoId = 0;
 
-// We create a TodoApp class that extends the base Component class.
-class TodoApp extends Component {
-  render() {
-    const {todos, visibilityFilter} = this.props;
-    const visibleTodos = getVisibleTodos(
-      todos,
-      visibilityFilter
-    );
-
-    return (
-        // The input uses React's callback ref api.
-        // ref is a function that gets the node corresponding to the ref
-        // We save the node to this.input.
-        // This allows us to later read the value of the input and reset it.
-
-        // The 'Add todo' button dispatches an action when clicked.
-
-        // We render a TodoList and pass a function so that each todo can dispatch
-        // a toggle action when clicked.
-      <div>
-        <input ref={node => {
-          this.input = node;
-        }} />
-        <button onClick={() => {
+// We create a TodoApp container component.
+// It contains many presentational components that are only concerned with
+// how things look.
+// It receives the keys of the global state object as the props.
+// All dispatching to the redux store happens here.
+// The store will then call our reducer and update the state of the application,
+// re-rendering the TodoApp component with the new state.
+const TodoApp = ({todos, visibilityFilter}) => {
+  return (
+      // We render a TodoList and pass a function so that each todo can dispatch
+      // a toggle action when clicked.
+    <div>
+      <AddTodo
+        onAddClick={(text) => {
           store.dispatch({
             type: 'ADD_TODO',
-            text: this.input.value,
+            text,
             id: nextTodoId++,
           });
-          // Reset the input value after dispatching the action so that
-          // the field is cleared.
-          this.input.value = '';
-        }}>
-          Add Todo
-        </button>
-        <TodoList
-          todos={visibleTodos}
-          onTodoClick={
-            (id) => {
-              store.dispatch({
-                type: 'TOGGLE_TODO',
-                id,
-              });
-            }
-          }/>
-        <p>
-          Show:
-
-          {' '}
-          <FilterLink
-            filter='SHOW_ALL'
-            currentFilter={visibilityFilter}
-          >
-            All
-          </FilterLink>
-
-          {' '}
-          <FilterLink
-            filter='SHOW_ACTIVE'
-            currentFilter={visibilityFilter}
-          >
-            Active
-          </FilterLink>
-
-          {' '}
-          <FilterLink
-            filter='SHOW_COMPLETED'
-            currentFilter={visibilityFilter}
-          >
-            Comlpeted
-          </FilterLink>
-        </p>
-      </div>
-    )
-  }
+        }}/>
+      <TodoList
+        todos={getVisibleTodos(todos, visibilityFilter)}
+        onTodoClick={
+          (id) => {
+            store.dispatch({
+              type: 'TOGGLE_TODO',
+              id,
+            });
+          }
+        }/>
+      <Footer
+        visibilityFilter={visibilityFilter}
+        onFilterClick={(filter) => {
+          store.dispatch({
+            type: 'SET_VISIBILITY_FILTER',
+            filter
+          });
+        }}/>
+    </div>
+  )
 }
 
 // This render function will get called every time a redux action is dispatched.
