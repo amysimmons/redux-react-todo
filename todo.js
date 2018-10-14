@@ -76,20 +76,15 @@ const todoApp = combineReducers({
 const { createStore } = Redux;
 const store = createStore(todoApp);
 
-// FilterLink is a presentational component.
-// The user clicks the FilterLink to switch the current visible todos.
-// The filter prop is a string indicating whether the user wants to
-// show all, show active or show completed.
-// The currentFilter prop allows us to style the currently selected filter
-// different to the others.
-// The onClick is the filter link click handler passed down from above.
+// The Link presentational component only specifies the appearance of the link
+// when it is active or inactive. It does not know about behaviour.
 // The children is the contents of the link, in this case either 'All', 'Active'
 // or 'Completed'.
-// The children get passed to the a tag so the parent component can specify
+// The children get passed to the a tag so a parent component can specify
 // the text of the link, making it more reusable.
-const FilterLink = ({ filter, currentFilter, onClick, children }) => {
-  // if the filter is the current filter, don't make it clickable
-  if (filter === currentFilter) {
+const Link = ({ active, onClick, children }) => {
+  // If link is active or selected, don't make it clickable.
+  if (active) {
     return (
       <span>{children}</span>
     )
@@ -98,7 +93,7 @@ const FilterLink = ({ filter, currentFilter, onClick, children }) => {
     <a href="#"
       onClick={(e) => {
         e.preventDefault(); // prevent navigation when clicked
-        onClick(filter);
+        onClick();
       }}
     >
       {children}
@@ -106,11 +101,47 @@ const FilterLink = ({ filter, currentFilter, onClick, children }) => {
   );
 };
 
+const {Component} = React;
+
+// The FilterLink container component provides the data and behaviour for the
+// presentational Link component.
+// It subscribes to the store, calling forceUpdate any time the store changes
+// so it can render the current state.
+// Every FilterLink component instance is subscribed to the store, so they will
+// all have their forceUpdate methods called when the redux state changes.
+class FilterLink extends Component {
+  componentDidMount() {
+    this.unsubscribe = store.subscribe(() => {
+      this.forceUpdate();
+    })
+  }
+
+  componentWillUnmount() {
+    this.unsubscribe();
+  }
+
+  render() {
+    const props = this.props;
+    const state = store.getState();
+
+    return (
+      <Link
+        active={props.filter === state.visibilityFilter}
+        onClick={() => {
+          store.dispatch({
+            type: 'SET_VISIBILITY_FILTER',
+            filter: props.filter
+          });
+        }}>
+          {props.children}
+        </Link>
+    )
+  }
+}
+
 // Footer is a presentational component.
 // It renders the three filter links.
-// It receives a prop and passes down the onFilterClick handler, which is
-// defined in our TodoApp container.
-const Footer = ({visibilityFilter, onFilterClick}) => {
+const Footer = () => {
   return (
     <p>
       Show:
@@ -118,8 +149,6 @@ const Footer = ({visibilityFilter, onFilterClick}) => {
       {' '}
       <FilterLink
         filter='SHOW_ALL'
-        currentFilter={visibilityFilter}
-        onClick={onFilterClick}
       >
         All
       </FilterLink>
@@ -127,8 +156,6 @@ const Footer = ({visibilityFilter, onFilterClick}) => {
       {' '}
       <FilterLink
         filter='SHOW_ACTIVE'
-        currentFilter={visibilityFilter}
-        onClick={onFilterClick}
       >
         Active
       </FilterLink>
@@ -136,8 +163,6 @@ const Footer = ({visibilityFilter, onFilterClick}) => {
       {' '}
       <FilterLink
         filter='SHOW_COMPLETED'
-        currentFilter={visibilityFilter}
-        onClick={onFilterClick}
       >
         Comlpeted
       </FilterLink>
@@ -253,14 +278,7 @@ const TodoApp = ({todos, visibilityFilter}) => {
             });
           }
         }/>
-      <Footer
-        visibilityFilter={visibilityFilter}
-        onFilterClick={(filter) => {
-          store.dispatch({
-            type: 'SET_VISIBILITY_FILTER',
-            filter
-          });
-        }}/>
+      <Footer/>
     </div>
   )
 }
