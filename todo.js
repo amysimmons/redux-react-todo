@@ -106,11 +106,14 @@ const {Component} = React;
 // The FilterLink container component provides the data and behaviour for the
 // presentational Link component.
 // It subscribes to the store, calling forceUpdate any time the store changes
-// so it can render the current state.
+// so it can re-render the Link with the current state.
 // Every FilterLink component instance is subscribed to the store, so they will
 // all have their forceUpdate methods called when the redux state changes.
 class FilterLink extends Component {
   componentDidMount() {
+    // subscribe lets you register a function that will be called every time
+    // an action is dispatched, so that you can update the UI to reflect
+    // the new application state.
     this.unsubscribe = store.subscribe(() => {
       this.forceUpdate();
     })
@@ -187,8 +190,46 @@ const Todo = ({onClick, completed, text}) => {
   );
 };
 
+// VisibleTodoList is a container component, like FilterLink.
+// It subscribes to the store and re-renders the TodoList any
+// time the store's state changes.
+// It calculates the visible todos, and dispatches an action on todo click.
+// The actual rendering is performed by the TodoList component.
+class VisibleTodoList extends Component {
+  componentDidMount() {
+    // subscribe lets you register a function that will be called every time
+    // an action is dispatched, so that you can update the UI to reflect
+    // the new application state.
+    this.unsubscribe = store.subscribe(() => {
+      this.forceUpdate();
+    })
+  }
+
+  componentWillUnmount() {
+    this.unsubscribe();
+  }
+
+  render() {
+    const props = this.props;
+    const state = store.getState();
+
+    return (
+      <TodoList
+        todos={getVisibleTodos(state.todos, state.visibilityFilter)}
+        onTodoClick={
+          (id) => {
+            store.dispatch({
+              type: 'TOGGLE_TODO',
+              id,
+            });
+          }
+        }/>
+    )
+  }
+}
+
 // TodoList is a presentational component that receives the currently visible
-// todos and the onTodoClick callback, which is specified in the TodoApp container.
+// todos and the onTodoClick callback.
 // It maps over the todos array, and for each one renders a Todo component.
 // To each Todo component it passes the todo properties (with the spread operator)
 // and the onTodoClick handler with the id of the particular todo.
@@ -209,14 +250,15 @@ const TodoList = ({todos, onTodoClick}) => {
   );
 };
 
-// AddTodo is a presentational component that renders an input and a button.
+// AddTodo is neither a container or a presentational component.
+// It renders an input and a button.
 // The input uses React's callback ref api.
 // ref is a function that gets the node corresponding to the ref.
 // We save the node to input variable.
 // This allows us to later read the value of the input and reset it.
-// When the button is clicked it passes the value to the onAddClick function,
-// which is specified in the TodoApp container component.
-const AddTodo = ({onAddClick}) => {
+// When the button is clicked it dispatches an action to the store with
+// the value of the todo.
+const AddTodo = () => {
   let input;
   return (
     <div>
@@ -224,7 +266,11 @@ const AddTodo = ({onAddClick}) => {
         input = node;
       }} />
       <button onClick={() => {
-        onAddClick(input.value);
+        store.dispatch({
+          type: 'ADD_TODO',
+          text: input.value,
+          id: nextTodoId++,
+        });
         // Reset the input value after dispatching the action so that
         // the field is cleared.
         input.value = '';
@@ -249,57 +295,25 @@ const getVisibleTodos = (todos, filter) => {
 let nextTodoId = 0;
 
 // We create a TodoApp container component.
-// It contains many presentational components that are only concerned with
-// how things look.
-// It receives the keys of the global state object as the props.
-// All dispatching to the redux store happens here.
-// The store will then call our reducer and update the state of the application,
-// re-rendering the TodoApp component with the new state.
-const TodoApp = ({todos, visibilityFilter}) => {
+// It renders several child components, which in turn render many
+// presentational components.
+// VisibleTodoList and Footer are container components, which subscribe
+// to the store and update themselves when the store state changes.
+// All dispatching to the redux store happens in the container components.
+// The presentation components are only concerned with how things look.
+// They do not know about the redux store.
+const TodoApp = () => {
   return (
-      // We render a TodoList and pass a function so that each todo can dispatch
-      // a toggle action when clicked.
     <div>
-      <AddTodo
-        onAddClick={(text) => {
-          store.dispatch({
-            type: 'ADD_TODO',
-            text,
-            id: nextTodoId++,
-          });
-        }}/>
-      <TodoList
-        todos={getVisibleTodos(todos, visibilityFilter)}
-        onTodoClick={
-          (id) => {
-            store.dispatch({
-              type: 'TOGGLE_TODO',
-              id,
-            });
-          }
-        }/>
+      <AddTodo/>
+      <VisibleTodoList/>
       <Footer/>
     </div>
   )
 }
 
-// This render function will get called every time a redux action is dispatched.
-// It gets the latest todos state from the store and passes them as props.
-// We pass every property in the global redux state object as a prop to the
-// TodoApp component with the spread operator.
-const render = () => {
-  ReactDOM.render(
-    <TodoApp
-    {...store.getState()}/>,
-    document.getElementById('root')
-  );
-}
-
-// subscribe lets you register a function that will be called every time
-// an action is dispatched, so that you can update the UI to reflect
-// the new application state.
-store.subscribe(render);
-
-// We also need to call render once at the start of our
-// application to render the initial state.
-render();
+// We render the TodoApp container once initially.
+ReactDOM.render(
+  <TodoApp/>,
+  document.getElementById('root')
+);
