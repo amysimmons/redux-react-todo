@@ -72,10 +72,6 @@ const todoApp = combineReducers({
   visibilityFilter
 });
 
-// createStore receives our top-level todoApp reducer.
-const { createStore } = Redux;
-const store = createStore(todoApp);
-
 // The Link presentational component only specifies the appearance of the link
 // when it is active or inactive. It does not know about behaviour.
 // The children is the contents of the link, in this case either 'All', 'Active'
@@ -111,6 +107,7 @@ const {Component} = React;
 // all have their forceUpdate methods called when the redux state changes.
 class FilterLink extends Component {
   componentDidMount() {
+    const {store} = this.props;
     // subscribe lets you register a function that will be called every time
     // an action is dispatched, so that you can update the UI to reflect
     // the new application state.
@@ -125,6 +122,7 @@ class FilterLink extends Component {
 
   render() {
     const props = this.props;
+    const {store} = props;
     const state = store.getState();
 
     return (
@@ -144,7 +142,7 @@ class FilterLink extends Component {
 
 // Footer is a presentational component.
 // It renders the three filter links.
-const Footer = () => {
+const Footer = ({store}) => {
   return (
     <p>
       Show:
@@ -152,6 +150,7 @@ const Footer = () => {
       {' '}
       <FilterLink
         filter='SHOW_ALL'
+        store={store}
       >
         All
       </FilterLink>
@@ -159,6 +158,7 @@ const Footer = () => {
       {' '}
       <FilterLink
         filter='SHOW_ACTIVE'
+        store={store}
       >
         Active
       </FilterLink>
@@ -166,6 +166,7 @@ const Footer = () => {
       {' '}
       <FilterLink
         filter='SHOW_COMPLETED'
+        store={store}
       >
         Comlpeted
       </FilterLink>
@@ -197,6 +198,7 @@ const Todo = ({onClick, completed, text}) => {
 // The actual rendering is performed by the TodoList component.
 class VisibleTodoList extends Component {
   componentDidMount() {
+    const {store} = this.props;
     // subscribe lets you register a function that will be called every time
     // an action is dispatched, so that you can update the UI to reflect
     // the new application state.
@@ -211,6 +213,7 @@ class VisibleTodoList extends Component {
 
   render() {
     const props = this.props;
+    const {store} = props;
     const state = store.getState();
 
     return (
@@ -258,7 +261,7 @@ const TodoList = ({todos, onTodoClick}) => {
 // This allows us to later read the value of the input and reset it.
 // When the button is clicked it dispatches an action to the store with
 // the value of the todo.
-const AddTodo = () => {
+const AddTodo = ({store}) => {
   let input;
   return (
     <div>
@@ -302,18 +305,25 @@ let nextTodoId = 0;
 // All dispatching to the redux store happens in the container components.
 // The presentation components are only concerned with how things look.
 // They do not know about the redux store.
-const TodoApp = () => {
+const TodoApp = ({store}) => {
   return (
     <div>
-      <AddTodo/>
-      <VisibleTodoList/>
-      <Footer/>
+      <AddTodo store={store}/>
+      <VisibleTodoList store={store}/>
+      <Footer store={store}/>
     </div>
   )
 }
 
+// createStore receives our top-level todoApp reducer.
+const { createStore } = Redux;
+
 // We render the TodoApp container once initially.
+// We pass the store as a prop to our top level component,
+// so the container components can subscribe to it.
+// This also making it easier to inject in testing.
 ReactDOM.render(
-  <TodoApp/>,
+  <TodoApp
+    store={createStore(todoApp)}/>,
   document.getElementById('root')
 );
