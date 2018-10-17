@@ -328,25 +328,9 @@ const TodoApp = () => {
 
 // We can wrap any component in a Provider and it is going to render that component.
 // Provider makes the store available to any component inside it, including grandchildren.
-// getChildContext will be called by React.
 // The store will be part of the context this the Provider provides for any of its children
 // and grandchildren.
-class Provider extends Component {
-  getChildContext() {
-    return {
-      store: this.props.store
-    }
-  }
-  render() {
-    return this.props.children;
-  }
-}
-
-// This must be specified for the context to work.
-// If you don't specify them no child components will receive the context.
-Provider.childContextTypes = {
-  store: React.PropTypes.object
-}
+const {Provider} = ReactRedux;
 
 // createStore receives our top-level todoApp reducer.
 const { createStore } = Redux;
@@ -354,8 +338,7 @@ const { createStore } = Redux;
 // We render the TodoApp container once initially.
 // We render it inside the Provider component, where we pass the store as a prop.
 // Provider just renders whatever you pass to it (its children), in this case the TodoApp component.
-// It also provides the context to any components inside it, including grandchildren,
-// which in this case contains the store.
+// It also provides the context, in this case the store, to any components inside it, including grandchildren.
 ReactDOM.render(
   <Provider store={createStore(todoApp)}>
     <TodoApp/>
