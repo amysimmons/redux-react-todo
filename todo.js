@@ -72,6 +72,39 @@ const todoApp = combineReducers({
   visibilityFilter
 });
 
+// Action creators take arguments about the action
+// and return an object that can be dispatched.
+// Action creators document your software, telling
+// your team what kinds of actions the components can
+// dispatch.
+// It is convenient to extract them and have them all in a single place.
+
+//action creator
+let nextTodoId = 0;
+const addTodo = (text) => {
+  return {
+    type: 'ADD_TODO',
+    text,
+    id: nextTodoId++,
+  }
+}
+
+// action creator
+const setVisibilityFilter = (filter) => {
+  return {
+     type: 'SET_VISIBILITY_FILTER',
+     filter
+   }
+}
+
+// action creator
+const toggleTodo = (id) => {
+  return {
+      type: 'TOGGLE_TODO',
+      id,
+  }
+}
+
 // The Link presentational component only specifies the appearance of the link
 // when it is active or inactive. It does not know about behaviour.
 // The children is the contents of the link, in this case either 'All', 'Active'
@@ -109,10 +142,7 @@ const mapStateToLinkProps = ( state, ownProps ) => {
 const mapDisptachToLinkProps = (dispatch, ownProps) => {
   return {
     onClick:() => {
-      dispatch({
-       type: 'SET_VISIBILITY_FILTER',
-       filter: ownProps.filter
-     });
+      dispatch(setVisibilityFilter(ownProps.filter));
     }
   }
 }
@@ -227,10 +257,7 @@ const mapStateTodoListProps = (state) => {
 const mapDisptachTodoListProps = (dispatch) => {
   return {
     onTodoClick: (id) => {
-      dispatch({
-        type: 'TOGGLE_TODO',
-        id,
-      })
+      dispatch(toggleTodo(id))
     }
   }
 }
@@ -240,6 +267,7 @@ const VisibleTodoList = connect(
   mapStateTodoListProps,
   mapDisptachTodoListProps
 )(TodoList);
+
 
 // AddTodo is neither a container or a presentational component.
 // It renders an input and a button.
@@ -259,11 +287,7 @@ let AddTodo = ({dispatch}) => {
         input = node;
       }} />
       <button onClick={() => {
-        dispatch({
-          type: 'ADD_TODO',
-          text: input.value,
-          id: nextTodoId++,
-        });
+        dispatch(addTodo(input.value));
         // Reset the input value after dispatching the action so that
         // the field is cleared.
         input.value = '';
@@ -300,8 +324,6 @@ const getVisibleTodos = (todos, filter) => {
       return todos.filter(t => t.completed);
   }
 }
-
-let nextTodoId = 0;
 
 // We create a TodoApp container component.
 // It renders several child components, which in turn render many
