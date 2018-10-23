@@ -1,4 +1,4 @@
-This is a Redux-React Todo App exercise from Dan Abramov's Egghead series [Getting started with Redux][1].
+This is a Redux-React Todo App exercise from [Dan Abramov](https://github.com/gaearon)'s Egghead series [Getting started with Redux][1].
 
 I coded along while watching the video, and added comments to explain each piece of code.
 
